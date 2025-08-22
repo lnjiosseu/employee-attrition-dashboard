@@ -1,0 +1,17 @@
+IBM Attrition Models Summary
+=============================
+Logistic Regression AUC: 0.841
+XGBoost AUC: 0.84
+Rows: 1470 | Columns: 32
+
+Top 10 Features (XGBoost):
+ 1. OverTimeYes — 100.0000
+ 2. MonthlyIncome — 62.7273
+ 3. Age — 44.5687
+ 4. StockOptionLevel — 42.1377
+ 5. JobInvolvement — 40.6264
+ 6. TotalWorkingYears — 40.1023
+ 7. EnvironmentSatisfaction — 38.2192
+ 8. DailyRate — 35.9620
+ 9. NumCompaniesWorked — 35.8534
+10. YearsWithCurrManager — 34.7973
