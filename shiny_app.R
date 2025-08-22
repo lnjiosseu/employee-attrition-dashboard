@@ -1,11 +1,11 @@
 # ============================================================
-# R/app_titled.R — Shiny app with Variable Importance (RF merged in metrics)
+# Shiny app with Variable Importance (RF merged in metrics)
 # Displays + saves ROC, PR, Gains, Lift, Calibration, Scores, Dept, VarImp
 # ============================================================
 
 rm(list = ls())   # Clear environment
 
-# ==== 0) PACKAGES ============================================================
+# ==== PACKAGES ============================================================
 if (!requireNamespace("shiny", quietly = TRUE)) install.packages("shiny")
 if (!requireNamespace("tidyverse", quietly = TRUE)) install.packages("tidyverse")
 if (!requireNamespace("pROC", quietly = TRUE)) install.packages("pROC")
@@ -14,14 +14,18 @@ if (!requireNamespace("ranger", quietly = TRUE)) install.packages("ranger")
 library(shiny); library(tidyverse); library(pROC); library(scales); library(ranger)
 
 # ==== 1) PATHS & HELPERS =====================================================
-OUT <- "shiny_outputs"; dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
-
 # 🔧 Direct path to your IBM CSV
+CSV_PATH <- "/Users/caliboi/Desktop/Resumes/Github/Project 3/ibm_hr_attrition.csv"
+
 find_ibm <- function() {
-  path <- "/Users/caliboi/Desktop/Resumes/Github/Project 3/ibm_hr_attrition.csv"
-  if (file.exists(path)) return(path)
+  if (file.exists(CSV_PATH)) return(CSV_PATH)
   return(NA)
 }
+
+# Ensure outputs are created NEXT TO the CSV (not relative to working dir)
+BASE_DIR <- dirname(CSV_PATH)
+OUT <- file.path(BASE_DIR, "shiny_outputs")
+dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 
 # ==== 2) UI ==================================================================
 ui <- fluidPage(
@@ -115,20 +119,24 @@ server <- function(input, output, session){
       test$prob <- predict(rf, data = test)$predictions[, "1"]
       mdl <- rf; mdl_name <- "Random Forest (ranger)"
       
-      # ---- Variable Importance
+      # ---- Variable Importance (white background)
       varimp_df <- tibble(
         Feature = names(rf$variable.importance),
         Importance = rf$variable.importance
       ) |> arrange(desc(Importance))
       
-      # Save plot
       p_varimp <- ggplot(varimp_df, aes(x = reorder(Feature, Importance), y = Importance)) +
         geom_col(fill = "steelblue") +
         coord_flip() +
         labs(title = "Random Forest Variable Importance", x = "Feature", y = "Importance") +
-        theme_minimal(12)
+        theme_minimal(12) +
+        theme(
+          panel.background = element_rect(fill = "white", color = NA),
+          plot.background  = element_rect(fill = "white", color = NA)
+        )
       
-      ggsave(file.path(OUT, "variable_importance.png"), p_varimp, width = 8, height = 6, dpi = 150)
+      ggsave(file.path(OUT, "variable_importance.png"), p_varimp,
+             width = 8, height = 6, dpi = 150, bg = "white")
     }
     
     # ---- 3c) Metrics
@@ -160,19 +168,29 @@ server <- function(input, output, session){
     
     readr::write_csv(metrics_df, file.path(OUT, "metrics.csv"))
     
-    # ---- 3e) Plots
+    # ---- 3e) Plots (white backgrounds + white exports)
     roc_df <- tibble(tpr = rev(roc_obj$sensitivities), fpr = rev(1 - roc_obj$specificities))
     p_roc <- ggplot(roc_df, aes(fpr, tpr)) + geom_line(linewidth = 1) +
       geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
       coord_equal(xlim = c(0,1), ylim = c(0,1)) +
       labs(title = paste0("ROC — ", mdl_name), subtitle = paste("AUC:", round(auc_val, 4)),
-           x = "FPR", y = "TPR") + theme_minimal(12)
+           x = "FPR", y = "TPR") +
+      theme_minimal(12) +
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_rect(fill = "white", color = NA)
+      )
     
     p_pr <- ggplot(pr_pts, aes(recall, precision)) + geom_line(linewidth = 1) +
       geom_hline(yintercept = baseline, linetype = "dashed", color = "grey40") +
       coord_cartesian(xlim = c(0,1), ylim = c(0,1)) +
       labs(title = "Precision–Recall — Test", subtitle = paste("AP:", round(ap,4), "| Baseline:", round(baseline,4)),
-           x = "Recall", y = "Precision") + theme_minimal(12)
+           x = "Recall", y = "Precision") +
+      theme_minimal(12) +
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_rect(fill = "white", color = NA)
+      )
     
     lift_tbl <- test |> arrange(desc(prob)) |> mutate(decile = ntile(-prob, 10)) |>
       group_by(decile) |> summarise(n=n(), events=sum(Attrition01), avg_prob=mean(prob), .groups="drop") |>
@@ -181,7 +199,12 @@ server <- function(input, output, session){
                                 event_rate=events/n, baseline_rate=sum(events)/sum(n), lift=event_rate/baseline_rate)
     
     p_lift <- ggplot(lift_tbl, aes(factor(decile), lift)) + geom_col() + geom_hline(yintercept = 1, linetype = "dashed") +
-      labs(title = "Lift by Decile — Test", x = "Decile", y = "Lift vs Overall") + theme_minimal(12)
+      labs(title = "Lift by Decile — Test", x = "Decile", y = "Lift vs Overall") +
+      theme_minimal(12) +
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_rect(fill = "white", color = NA)
+      )
     
     calib_tbl <- test |> mutate(bin = ntile(prob, 10)) |>
       group_by(bin) |> summarise(n=n(), mean_pred=mean(prob), obs_rate=mean(Attrition01), .groups="drop") |>
@@ -190,12 +213,21 @@ server <- function(input, output, session){
     p_cal <- ggplot(calib_tbl, aes(mean_pred, obs_rate)) + geom_abline(slope = 1, intercept = 0, linetype = "dashed", color="grey40") +
       geom_line(linewidth = 1) + geom_point(size = 2) +
       labs(title = "Calibration — Test", subtitle = paste("Brier:", round(brier,4)),
-           x = "Mean Pred", y = "Observed") + theme_minimal(12)
+           x = "Mean Pred", y = "Observed") +
+      theme_minimal(12) +
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_rect(fill = "white", color = NA)
+      )
     
     p_hist <- ggplot(test, aes(prob, fill = factor(Attrition01, labels = c("No","Yes")))) +
       geom_histogram(binwidth = 0.05, position = "identity", alpha = 0.45, boundary = 0, closed = "left") +
       labs(title = "Score Distribution — Test", x = "Predicted Probability", y = "Count", fill = "Attrition") +
-      theme_minimal(12)
+      theme_minimal(12) +
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_rect(fill = "white", color = NA)
+      )
     
     dept_sum <- d |>
       group_by(Department) |>
@@ -204,14 +236,18 @@ server <- function(input, output, session){
     p_dept <- ggplot(dept_sum, aes(headcount, attrition_rate, size = headcount, label = Department)) +
       geom_point(alpha = 0.7) + geom_text(vjust = -1, size = 3.2) +
       labs(title = "Department View", x = "Headcount", y = "Attrition Rate", size = "Headcount") +
-      theme_minimal(12)
+      theme_minimal(12) +
+      theme(
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background  = element_rect(fill = "white", color = NA)
+      )
     
-    # ---- Save other plots
-    ggsave(file.path(OUT, "roc_curve.png"), p_roc, width = 8, height = 6, dpi = 150)
-    ggsave(file.path(OUT, "pr_curve.png"), p_pr, width = 8, height = 6, dpi = 150)
-    ggsave(file.path(OUT, "lift_chart.png"), p_lift, width = 8, height = 6, dpi = 150)
-    ggsave(file.path(OUT, "calibration_plot.png"), p_cal, width = 8, height = 6, dpi = 150)
-    ggsave(file.path(OUT, "score_histogram.png"), p_hist, width = 8, height = 6, dpi = 150)
+    # ---- Save plots (export with bg="white")
+    ggsave(file.path(OUT, "roc_curve.png"),         p_roc,  width = 8, height = 6, dpi = 150, bg = "white")
+    ggsave(file.path(OUT, "pr_curve.png"),          p_pr,   width = 8, height = 6, dpi = 150, bg = "white")
+    ggsave(file.path(OUT, "lift_chart.png"),        p_lift, width = 8, height = 6, dpi = 150, bg = "white")
+    ggsave(file.path(OUT, "calibration_plot.png"),  p_cal,  width = 8, height = 6, dpi = 150, bg = "white")
+    ggsave(file.path(OUT, "score_histogram.png"),   p_hist, width = 8, height = 6, dpi = 150, bg = "white")
     
     list(model = mdl, name = mdl_name, auc = auc_val, ap = ap, brier = brier, baseline = baseline,
          roc = p_roc, pr = p_pr, lift = p_lift, cal = p_cal, hist = p_hist, dept = p_dept,
@@ -220,7 +256,7 @@ server <- function(input, output, session){
   
   # ---- 3f) Outputs
   output$auc_txt <- renderText({ req(trained()); sprintf("%.4f", trained()$auc) })
-  output$ap_txt <- renderText({ req(trained()); sprintf("%.4f", trained()$ap) })
+  output$ap_txt  <- renderText({ req(trained()); sprintf("%.4f", trained()$ap) })
   output$brier_txt <- renderText({ req(trained()); sprintf("%.4f", trained()$brier) })
   output$baseline_txt <- renderText({ req(trained()); sprintf("%.4f", trained()$baseline) })
   
