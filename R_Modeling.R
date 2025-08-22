@@ -34,11 +34,18 @@ p1 <- ggplot(hr, aes(x = Attrition, fill = Attrition)) +
   geom_bar() +
   labs(title = "Attrition Distribution", x = "Attrition", y = "Count") +
   theme_minimal() +
-  theme(panel.background = element_rect(fill="white", color=NA))
+  theme(
+    panel.background = element_rect(fill="white", color=NA),
+    plot.background  = element_rect(fill="white", color=NA)   # ✅ added
+  )
 
 print(p1) # show in RStudio
-ggsave(filename = file.path(out_dir, "attrition_distribution.png"), plot = p1,
-       width = 8, height = 5, dpi = 300)
+ggsave(
+  filename = file.path(out_dir, "attrition_distribution.png"),
+  plot = p1,
+  width = 8, height = 5, dpi = 300,
+  bg = "white"   # ✅ added
+)
 cat("📊 Saved →", file.path(out_dir, "attrition_distribution.png"), "\n")
 
 # ---- Train-test split ----
@@ -90,8 +97,8 @@ plot(roc_xgb, col="red", add=TRUE)
 legend("bottomright", legend=c("Logistic Regression", "XGBoost"),
        col=c("blue","red"), lwd=2)
 
-# Save as PNG
-png(file.path(out_dir, "roc_comparison.png"), width = 800, height = 500)
+# Save as PNG (with white background)
+png(file.path(out_dir, "roc_comparison.png"), width = 800, height = 500, bg = "white")  # ✅ added bg
 plot(roc_logit, col="blue", main="ROC Curve - Logistic vs XGBoost")
 plot(roc_xgb, col="red", add=TRUE)
 legend("bottomright", legend=c("Logistic Regression", "XGBoost"),
@@ -107,11 +114,18 @@ p3 <- ggplot(xgb_importance, aes(x = reorder(rownames(xgb_importance$importance)
   coord_flip() +
   labs(title="Feature Importance (XGBoost)", x="Features", y="Importance") +
   theme_minimal() +
-  theme(panel.background = element_rect(fill="white", color=NA))
+  theme(
+    panel.background = element_rect(fill="white", color=NA),
+    plot.background  = element_rect(fill="white", color=NA)   # ✅ added
+  )
 
 print(p3) # show in RStudio
-ggsave(filename = file.path(out_dir, "feature_importance.png"), plot = p3,
-       width = 8, height = 6, dpi = 300)
+ggsave(
+  filename = file.path(out_dir, "feature_importance.png"),
+  plot = p3,
+  width = 8, height = 6, dpi = 300,
+  bg = "white"   # ✅ added
+)
 cat("📊 Saved →", file.path(out_dir, "feature_importance.png"), "\n")
 
 # ---- 📊 Visual 4: Correlation Heatmap ----
@@ -131,8 +145,8 @@ corrplot(corr_matrix, method="color", type="upper",
          title="Correlation Heatmap (Numeric Features & Attrition)",
          mar=c(0,0,2,0))
 
-# Save as PNG
-png(file.path(out_dir, "correlation_heatmap.png"), width = 900, height = 700)
+# Save as PNG (with white background)
+png(file.path(out_dir, "correlation_heatmap.png"), width = 900, height = 700, bg = "white")  # ✅ added bg
 corrplot(corr_matrix, method="color", type="upper", 
          tl.cex=0.7, tl.col="black",
          title="Correlation Heatmap (Numeric Features & Attrition)",
